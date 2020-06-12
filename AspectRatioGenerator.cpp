@@ -5,7 +5,13 @@
 
 #include "LandmarkPredictor.h"
 
+namespace fs = std::filesystem;
+
 void drawLandmarks(cv::Mat& frame, std::vector<cv::Point2f> points);
+std::vector<cv::Point2f> getPartCoordinates(std::vector<cv::Point2f> allCoordinates, int partIdx);
+float pointEuclideanDist(cv::Point2f p, cv::Point2f q);
+float eyeAspectRatio(std::vector<cv::Point2f> coordinates);
+float mouthAspectRatio(std::vector<cv::Point2f> coordinates);
 
 int main()
 {
@@ -36,6 +42,11 @@ int main()
 		// read current frame
 		cap.read(currentFrame);
 
+		// check if the video has finished
+		if (currentFrame.empty()) {
+			break;
+		}
+
 		// container for points from all areas of interest
 		std::vector<cv::Point2f> coordinates;
 
@@ -63,6 +74,30 @@ int main()
 			coordinates = LK::track(currentFrame);
 		}
 
+		// write output
+		std::cout << "0" << ";" << "0" << ";" << frameCounter;
+
+		// get aspect ratio 		
+		if (!coordinates.empty()) {
+			// container
+			float aspectRatio[3];
+			// check eye closed
+			aspectRatio[0] = eyeAspectRatio(getPartCoordinates(coordinates, 0));
+			aspectRatio[1] = eyeAspectRatio(getPartCoordinates(coordinates, 1));
+			aspectRatio[2] = mouthAspectRatio(getPartCoordinates(coordinates, 2));
+			// print
+			std::cout << ";" << aspectRatio[0] << ";" << aspectRatio[1] << ";" << aspectRatio[2];
+		}
+		else {
+			std::cout << ";;;";
+		}
+
+		// end row
+		std::cout << std::endl;
+
+		// increase frame counter
+		frameCounter++;
+
 		// draw landmark points on frame
 		drawLandmarks(currentFrame, coordinates);
 
@@ -88,4 +123,40 @@ void drawLandmarks(cv::Mat& frame, std::vector<cv::Point2f> points) {
 	for (auto const& point : points) {
 		cv::circle(frame, point, 1, CV_RGB(0, 255, 0), 2);
 	}
+}
+
+std::vector<cv::Point2f> getPartCoordinates(std::vector<cv::Point2f> allCoordinates, int partIdx) {
+	const int PART[3][2] = { {0,5}, {6,11}, {12,19} };
+	std::vector<cv::Point2f> coordinates;
+	for (int idx = PART[partIdx][0]; idx <= PART[partIdx][1]; ++idx) {
+		coordinates.emplace_back(std::forward<cv::Point2f>(allCoordinates[idx]));
+	}
+	return coordinates;
+}
+
+float pointEuclideanDist(cv::Point2f p, cv::Point2f q) {
+	float a = q.x - p.x;
+	float b = q.y - p.y;
+	return std::sqrt(a * a + b * b);
+}
+
+float eyeAspectRatio(std::vector<cv::Point2f> coordinates) {
+	// compute the euclidean distances between the two sets of vertical eye landmarks(x, y) - coordinates
+	float a = pointEuclideanDist(coordinates[1], coordinates[5]);
+	float b = pointEuclideanDist(coordinates[2], coordinates[4]);
+	// compute the euclidean distance between the horizontal eye landmark(x, y) - coordinates
+	float c = pointEuclideanDist(coordinates[0], coordinates[3]);
+	// compute eye aspect ratio
+	return (a + b) / (2 * c);
+}
+
+float mouthAspectRatio(std::vector<cv::Point2f> coordinates) {
+	// compute the euclidean distances between the three sets of vertical mouth landmarks (x, y)-coordinates
+	float a = pointEuclideanDist(coordinates[1], coordinates[7]);
+	float b = pointEuclideanDist(coordinates[2], coordinates[6]);
+	float c = pointEuclideanDist(coordinates[3], coordinates[5]);
+	// compute the euclidean distance between the horizontal mouth landmark (x, y)-coordinates
+	float d = pointEuclideanDist(coordinates[0], coordinates[4]);
+	// compute mouth aspect ratio
+	return (a + b + c) / (3 * d);
 }
