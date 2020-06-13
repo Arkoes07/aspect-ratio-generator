@@ -24,13 +24,17 @@ int main()
 	LP::initializePredictor();
 
 	// list of folders
-	std::string folders[] = { "01", "05", "06", "07", "08"};
+	std::string folders[] = { "01" };
 	int folderLen = sizeof(folders) / sizeof(folders[0]);
 
 	// loop through the folders
 	for (int idx = 0; idx < folderLen; ++idx) {
 		// get folder number
 		std::string subject = folders[idx];
+
+		// create a file for output
+		std::ofstream file;
+		file.open(outPath + "\\" + subject + ".csv", std::ios_base::app);
 
 		for (const auto& entry : fs::directory_iterator(dataPath + "\\" + subject)) {
 
@@ -84,7 +88,6 @@ int main()
 					}
 					catch (int errorCode) {
 						if (errorCode == 1) {
-							std::cout << "no face detected" << std::endl;
 							LK::setTracking(false);
 						}
 					}
@@ -95,7 +98,7 @@ int main()
 				}
 
 				// write output
-				std::cout << subject << ";" << classNumber << ";" << frameCounter;
+				file << subject << ";" << classNumber << ";" << frameCounter;
 
 				// get aspect ratio 		
 				if (!coordinates.empty()) {
@@ -106,35 +109,26 @@ int main()
 					aspectRatio[1] = eyeAspectRatio(getPartCoordinates(coordinates, 1));
 					aspectRatio[2] = mouthAspectRatio(getPartCoordinates(coordinates, 2));
 					// print
-					std::cout << ";" << aspectRatio[0] << ";" << aspectRatio[1] << ";" << aspectRatio[2];
+					file << ";" << aspectRatio[0] << ";" << aspectRatio[1] << ";" << aspectRatio[2];
 				}
 				else {
-					std::cout << ";;;";
+					file << ";;;";
 				}
 
 				// end row
-				std::cout << std::endl;
+				file << std::endl;
 
 				// increase frame counter
 				frameCounter++;
-
-				// draw landmark points on frame
-				drawLandmarks(currentFrame, coordinates);
-
-				// Display current frame
-				cv::imshow("Frame", currentFrame);
-
-				// Press ESC on keyboard to exit
-				char c = (char)cv::waitKey(1);
-				if (c == 27) {
-					LK::setTracking(false);
-					break;
-				}
 			}
 
 			// When everything done, release the video capture object
 			cap.release();
 		}
+		file.close();
+
+		std::string&& finish = "process finished for folder : " + subject;
+		std::cout << finish << std::endl;
 	}
 	// closes all the frames
 	cv::destroyAllWindows();
