@@ -11,10 +11,10 @@ const int PART[3][2] = { {0,5}, {6,11}, {12,19} };
 
 // OpenCV DNN
 cv::dnn::Net DNN_NET;
-const size_t DNN_INWIDTH = 640;
-const size_t DNN_INHEIGHT = 480;
+const size_t DNN_INWIDTH = 300;
+const size_t DNN_INHEIGHT = 300;
 const double DNN_INSCALE_FACTOR = 1.0;
-const float DNN_CONFIDENCE_THRESHOLD = 0.7;
+const float DNN_CONFIDENCE_THRESHOLD = 0.8;
 const cv::Scalar DNN_MEAN_VAL = cv::Scalar(104.0, 177.0, 123.0);
 
 // Dlib facial landmark predictor
@@ -144,6 +144,8 @@ void LP::predictLandmarks(dlib::full_object_detection& container, cv::Mat& inFra
 	if (rectangles.size() == 0) {
 		throw 1; // no face detected (1)
 	}
+
+	std::cout << rectangles.size() << " face(s) detected" << std::endl;
 
 	// get biggest detected face
 	int biggestAreaIdx = 0;
