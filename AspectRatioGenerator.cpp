@@ -19,7 +19,7 @@ int main()
 	LP::initializePredictor();
 
 	// open video file
-	cv::VideoCapture cap("D:\\datasets\\ngantuk\\01\\0.mp4");
+	cv::VideoCapture cap("D:\\datasets\\ngantuk\\data\\01\\0.mp4");
 
 	if (!cap.isOpened())  // isOpened() returns true if capturing has been initialized.
 	{
@@ -44,6 +44,7 @@ int main()
 
 		// check if the video has finished
 		if (currentFrame.empty()) {
+			LK::setTracking(false);
 			break;
 		}
 
@@ -106,8 +107,10 @@ int main()
 
 		// Press ESC on keyboard to exit
 		char c = (char)cv::waitKey(1);
-		if (c == 27)
+		if (c == 27) {
+			LK::setTracking(false);
 			break;
+		}
 	}
 
 	// When everything done, release the video capture object
