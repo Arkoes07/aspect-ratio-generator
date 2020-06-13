@@ -145,8 +145,6 @@ void LP::predictLandmarks(dlib::full_object_detection& container, cv::Mat& inFra
 		throw 1; // no face detected (1)
 	}
 
-	std::cout << rectangles.size() << " face(s) detected" << std::endl;
-
 	// get biggest detected face
 	int biggestAreaIdx = 0;
 	unsigned long biggestArea = 0;
