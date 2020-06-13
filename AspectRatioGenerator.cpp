@@ -7,6 +7,11 @@
 
 namespace fs = std::filesystem;
 
+// data path
+const std::string dataPath = "D:\\datasets\\ngantuk\\data";
+// output path
+const std::string outPath = "D:\\datasets\\ngantuk\\csv";
+
 void drawLandmarks(cv::Mat& frame, std::vector<cv::Point2f> points);
 std::vector<cv::Point2f> getPartCoordinates(std::vector<cv::Point2f> allCoordinates, int partIdx);
 float pointEuclideanDist(cv::Point2f p, cv::Point2f q);
@@ -18,104 +23,119 @@ int main()
 	// Setup Face Detector and Facial Landmark Predictor
 	LP::initializePredictor();
 
-	// open video file
-	cv::VideoCapture cap("D:\\datasets\\ngantuk\\data\\01\\0.mp4");
+	// list of folders
+	std::string folders[] = { "01", "05", "06", "07", "08"};
+	int folderLen = sizeof(folders) / sizeof(folders[0]);
 
-	if (!cap.isOpened())  // isOpened() returns true if capturing has been initialized.
-	{
-		std::cout << "Cannot open the video file. \n";
-		return -1;
-	}
+	// loop through the folders
+	for (int idx = 0; idx < folderLen; ++idx) {
+		// get folder number
+		std::string subject = folders[idx];
 
-	// landmaarks container
-	dlib::full_object_detection landmarks;
+		for (const auto& entry : fs::directory_iterator(dataPath + "\\" + subject)) {
 
-	// current frame container
-	cv::Mat currentFrame;
+			// get file name (class)
+			std::string classNumber = entry.path().stem().string();
 
-	// variable for storing video information
-	float frameCounter = 0;
+			// Create a VideoCapture object and open the input file
+			cv::VideoCapture cap(entry.path().string());
 
-	// get frames from camera
-	while (1) {
-
-		// read current frame
-		cap.read(currentFrame);
-
-		// check if the video has finished
-		if (currentFrame.empty()) {
-			LK::setTracking(false);
-			break;
-		}
-
-		// container for points from all areas of interest
-		std::vector<cv::Point2f> coordinates;
-
-		// Check if the program is in tracking mode
-		if (!LK::isTracking()) {
-			// detect landmarks
-			try {
-				LP::predictLandmarks(landmarks, currentFrame);
-
-				// get points from all areas of interest
-				coordinates = LP::getCoordinatesFromLandmarks(landmarks);
-
-				// comment to disable tracking for the next frames
-				LK::start(currentFrame, landmarks);
+			if (!cap.isOpened())  // isOpened() returns true if capturing has been initialized.
+			{
+				std::cout << "Cannot open the video file. \n";
+				return -1;
 			}
-			catch (int errorCode) {
-				if (errorCode == 1) {
-					std::cout << "no face detected" << std::endl;
+
+			// landmaarks container
+			dlib::full_object_detection landmarks;
+
+			// current frame container
+			cv::Mat currentFrame;
+
+			// variable for storing video information
+			float frameCounter = 0;
+
+			// get frames from camera
+			while (1) {
+
+				// read current frame
+				cap.read(currentFrame);
+
+				// check if the video has finished
+				if (currentFrame.empty()) {
 					LK::setTracking(false);
+					break;
+				}
+
+				// container for points from all areas of interest
+				std::vector<cv::Point2f> coordinates;
+
+				// Check if the program is in tracking mode
+				if (!LK::isTracking()) {
+					// detect landmarks
+					try {
+						LP::predictLandmarks(landmarks, currentFrame);
+
+						// get points from all areas of interest
+						coordinates = LP::getCoordinatesFromLandmarks(landmarks);
+
+						// comment to disable tracking for the next frames
+						//LK::start(currentFrame, landmarks);
+					}
+					catch (int errorCode) {
+						if (errorCode == 1) {
+							std::cout << "no face detected" << std::endl;
+							LK::setTracking(false);
+						}
+					}
+				}
+				else {
+					// get points from track
+					coordinates = LK::track(currentFrame);
+				}
+
+				// write output
+				std::cout << subject << ";" << classNumber << ";" << frameCounter;
+
+				// get aspect ratio 		
+				if (!coordinates.empty()) {
+					// container
+					float aspectRatio[3];
+					// check eye closed
+					aspectRatio[0] = eyeAspectRatio(getPartCoordinates(coordinates, 0));
+					aspectRatio[1] = eyeAspectRatio(getPartCoordinates(coordinates, 1));
+					aspectRatio[2] = mouthAspectRatio(getPartCoordinates(coordinates, 2));
+					// print
+					std::cout << ";" << aspectRatio[0] << ";" << aspectRatio[1] << ";" << aspectRatio[2];
+				}
+				else {
+					std::cout << ";;;";
+				}
+
+				// end row
+				std::cout << std::endl;
+
+				// increase frame counter
+				frameCounter++;
+
+				// draw landmark points on frame
+				drawLandmarks(currentFrame, coordinates);
+
+				// Display current frame
+				cv::imshow("Frame", currentFrame);
+
+				// Press ESC on keyboard to exit
+				char c = (char)cv::waitKey(1);
+				if (c == 27) {
+					LK::setTracking(false);
+					break;
 				}
 			}
-		}
-		else {
-			// get points from track
-			coordinates = LK::track(currentFrame);
-		}
 
-		// write output
-		std::cout << "0" << ";" << "0" << ";" << frameCounter;
-
-		// get aspect ratio 		
-		if (!coordinates.empty()) {
-			// container
-			float aspectRatio[3];
-			// check eye closed
-			aspectRatio[0] = eyeAspectRatio(getPartCoordinates(coordinates, 0));
-			aspectRatio[1] = eyeAspectRatio(getPartCoordinates(coordinates, 1));
-			aspectRatio[2] = mouthAspectRatio(getPartCoordinates(coordinates, 2));
-			// print
-			std::cout << ";" << aspectRatio[0] << ";" << aspectRatio[1] << ";" << aspectRatio[2];
-		}
-		else {
-			std::cout << ";;;";
-		}
-
-		// end row
-		std::cout << std::endl;
-
-		// increase frame counter
-		frameCounter++;
-
-		// draw landmark points on frame
-		drawLandmarks(currentFrame, coordinates);
-
-		// Display current frame
-		cv::imshow("Frame", currentFrame);
-
-		// Press ESC on keyboard to exit
-		char c = (char)cv::waitKey(1);
-		if (c == 27) {
-			LK::setTracking(false);
-			break;
+			// When everything done, release the video capture object
+			cap.release();
 		}
 	}
-
-	// When everything done, release the video capture object
-	cap.release();
-
 	// closes all the frames
 	cv::destroyAllWindows();
 
