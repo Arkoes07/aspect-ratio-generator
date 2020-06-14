@@ -24,7 +24,7 @@ int main()
 	LP::initializePredictor();
 
 	// list of folders
-	std::string folders[] = { "01" };
+	std::string folders[] = { "01", "05", "06", "07", "08" };
 	int folderLen = sizeof(folders) / sizeof(folders[0]);
 
 	// loop through the folders
@@ -57,7 +57,7 @@ int main()
 			cv::Mat currentFrame;
 
 			// variable for storing video information
-			float frameCounter = 0;
+			float frameCounter = 1;
 
 			// get frames from camera
 			while (1) {
