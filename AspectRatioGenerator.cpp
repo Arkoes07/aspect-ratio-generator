@@ -24,7 +24,7 @@ int main()
 	LP::initializePredictor();
 
 	// list of folders
-	std::string folders[] = { "01", "05", "06", "07", "08" };
+	std::string folders[] = { "01", "02", "03", "04", "05", "06", "07", "08", "09", "10" };
 	int folderLen = sizeof(folders) / sizeof(folders[0]);
 
 	// loop through the folders
